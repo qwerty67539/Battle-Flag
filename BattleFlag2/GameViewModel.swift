@@ -105,8 +105,8 @@ class GameViewModel: ObservableObject {
         var steps = Int.random(in: 4...7)
         var currentStep = 0
         var loops = 0
-        for line in grid { print(line) }
-        print(pointer, "\n")
+        //for line in grid { print(line) }
+        //print(pointer, "\n")
         while currentStep < steps {
             var repeats = 0
             let pointerReset = pointer
@@ -126,8 +126,8 @@ class GameViewModel: ObservableObject {
                         grid[pointer[0]][pointer[1]] = 0
                     }
                     repeats += 1
-                    for line in grid { print(line) }
-                    print(pointer, ", ", repeats, ", ", previousDirection ?? "nil", "\n")
+                    //for line in grid { print(line) }
+                    //print(pointer, ", ", repeats, ", ", previousDirection ?? "nil", "\n")
                 }
                 if repeats < 0 || grid[pointer[0] + getDirectionDelta(direction).0][pointer[1] + getDirectionDelta(direction).1] == 2 {
                     loops += 1
@@ -136,7 +136,7 @@ class GameViewModel: ObservableObject {
                     repeat {
                         newDirection = MoveDirection.allCases[Int.random(in: 0...3)]
                     } while newDirection == previousDirection || newDirection == oppositeDirection(direction: previousDirection)
-                    print(direction, ", ", newDirection)
+                    //print(direction, ", ", newDirection)
                     direction = newDirection
                 }
             } while repeats < 0
@@ -158,9 +158,9 @@ class GameViewModel: ObservableObject {
                 newDirection = MoveDirection.allCases[Int.random(in: 0...3)]
             } while newDirection == direction || newDirection == oppositeDirection(direction: direction)
             direction = newDirection
-            for line in grid { print(line) }
-            print(pointer)
-            print("\n")
+            //for line in grid { print(line) }
+            //print(pointer)
+            //print("\n")
             currentStep += 1
         }
         while grid[pointer[0]][pointer[1]] == 1 || grid[pointer[0]][pointer[1]] == 2 {
@@ -180,11 +180,8 @@ class GameViewModel: ObservableObject {
                              generateEasy: true, generateMedium: false)
         pieces = GameViewModel.buildPieces(from: grid)
         let optimal = findOptimal(maxSteps: steps)
-        if optimal == -1 {
-            return false
-        }
         if optimal < steps {
-            currentLevel.minSteps = optimal
+            return false
         }
         return true
     }
@@ -243,9 +240,9 @@ class GameViewModel: ObservableObject {
                              minSteps: -1, checkOptimal: false,
                              generateEasy: false, generateMedium: true)
 
-        let result = findOptimalMedium(minSteps: 6, maxSteps: 10, minBoxesMoved: 3)
+        let result = findOptimalMedium(minSteps: 6, maxSteps: 15, minBoxesMoved: 3)
 
-        guard result >= 6 else {
+        guard result[0] >= 6  && result[1] >= 3 else {
             // Restore state and reject
             grid        = savedGrid
             flagRow     = savedFlagRow
@@ -257,7 +254,7 @@ class GameViewModel: ObservableObject {
         currentLevel = Level(id: currentLevel.id, name: currentLevel.name, grid: g,
                              startPos: (row: fr, col: fc),
                              targetPos: (row: tr, col: tc),
-                             minSteps: result, checkOptimal: false,
+                             minSteps: result[0], checkOptimal: false,
                              generateEasy: false, generateMedium: true)
         grid   = g
         pieces = GameViewModel.buildPieces(from: g)
@@ -270,7 +267,7 @@ class GameViewModel: ObservableObject {
     // been moved at least once, so we can enforce a minimum distinct-box count.
     // Returns the depth of the shallowest solution that satisfies both constraints,
     // or -1 if none is found within maxSteps.
-    private func findOptimalMedium(minSteps: Int, maxSteps: Int, minBoxesMoved: Int) -> Int {
+    private func findOptimalMedium(minSteps: Int, maxSteps: Int, minBoxesMoved: Int) -> [Int] {
         let startTime = Date()
 
         let rows      = grid.count
@@ -320,6 +317,7 @@ class GameViewModel: ObservableObject {
                 let fRow  = fIdx / cols
                 let fCol  = fIdx % cols
                 let boxes = st.boxIndices()
+                if Date().timeIntervalSince(startTime) > 2 { return [bestResult, -1] }
 
                 for (dRow, dCol) in deltas {
 
@@ -338,13 +336,11 @@ class GameViewModel: ObservableObject {
                         if newFIdx == targetIdx {
                             // Win — check both constraints
                             let boxCount = node.boxesMoved.nonzeroBitCount
-                            if step >= minSteps && boxCount >= minBoxesMoved {
-                                let elapsed = Date().timeIntervalSince(startTime)
-                                print("[findOptimalMedium] Found in \(step) step(s), \(boxCount) boxes moved. Time: \(String(format: "%.4f", elapsed))s")
-                                return step
-                            }
-                            // Doesn't satisfy constraints — don't propagate this path
-                            continue
+                            let elapsed = Date().timeIntervalSince(startTime)
+                            print("[findOptimalMedium] Found in \(step) step(s), \(boxCount) boxes moved. Time: \(String(format: "%.4f", elapsed))s")
+                            let grid2 = unpackGrid(from: node.state, rows: grid.count, cols: grid[0].count)
+                            for line in grid2 {print(line)}
+                            return [step, boxCount]
                         }
                         let newNode = MediumNode(state: newSt, flagIdx: newFIdx,
                                                  boxesMoved: node.boxesMoved)
@@ -402,7 +398,7 @@ class GameViewModel: ObservableObject {
 
         let elapsed = Date().timeIntervalSince(startTime)
         print("[findOptimalMedium] No qualifying solution found within \(maxSteps) step(s). Time: \(String(format: "%.4f", elapsed))s")
-        return bestResult
+        return [bestResult, -1]
     }
 
     // MARK: - Direction helpers
@@ -478,6 +474,26 @@ class GameViewModel: ObservableObject {
             }
         }
         return BFSState(w0: w0, w1: w1)
+    }
+    
+    // Unpack BFSState bitboard into a grid
+    private func unpackGrid(from state: BFSState, rows: Int, cols: Int) -> [[Int]] {
+        var grid = Array(repeating: Array(repeating: 0, count: cols), count: rows)
+        
+        for r in 0..<rows {
+            for c in 0..<cols {
+                let idx = r * cols + c
+                // Select w0 for indices 0..<32, and w1 for indices >= 32
+                let word = idx < 32 ? state.w0 : state.w1
+                let shift = UInt64((idx & 31) << 1)
+                
+                // Shift back and mask with 0x3 to extract the 2-bit value
+                let cellValue = Int((word >> shift) & 0x3)
+                grid[r][c] = cellValue
+            }
+        }
+        
+        return grid
     }
 
     // BFS node: bitboard + flag cell index (row*cols+col).
@@ -613,8 +629,8 @@ class GameViewModel: ObservableObject {
         } else {
             self.isPerfectWin = false
             self.grid = currentLevel.grid
-            for line in grid { print(line) }
-            print(isPerfectWin)
+            //for line in grid { print(line) }
+            //print(isPerfectWin)
             self.flagRow = currentLevel.startPos.row
             self.flagCol = currentLevel.startPos.col
         }
