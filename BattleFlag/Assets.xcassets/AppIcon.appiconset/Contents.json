@@ -2,13 +2,16 @@
   "images" : [
     {
       "filename" : "AppIcon.png",
-      "idiom" : "universal",
-      "platform" : "ios",
+      "idiom" : "ios-marketing",
+      "scale" : "1x",
       "size" : "1024x1024"
     }
   ],
   "info" : {
     "author" : "xcode",
     "version" : 1
+  },
+  "properties" : {
+    "pre-rendered" : true
   }
 }
