@@ -193,7 +193,7 @@ let levels: [Level] = [
     ),
     Level(
         id: 9,
-        name: "Level 9 (Medium, Random)",
+        name: "Level 9 (Hard, Random)",
         grid: [
             [0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0],
