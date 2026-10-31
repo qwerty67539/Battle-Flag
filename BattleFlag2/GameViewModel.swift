@@ -1,11 +1,9 @@
 import SwiftUI
 import Combine
-
 enum SelectionType: Hashable {
     case flag
     case box(row: Int, col: Int)
 }
-
 // Represents an animatable piece on the board
 struct MovingPiece: Identifiable, Hashable{
     let id: String       // stable identity: "flag" or "box-r-c" based on initial position
@@ -14,7 +12,6 @@ struct MovingPiece: Identifiable, Hashable{
     var type: TileType   // .flag or .box
     var isSelected: Bool
 }
-
 // Snapshot of all mutable game state, used for undo
 private struct GameSnapshot: Hashable {
     let grid: [[Int]]
@@ -33,7 +30,6 @@ private struct GameSnapshot: Hashable {
         return GameSnapshot(grid: grid, pieces: pieces, flagRow: flagRow, flagCol: flagCol, steps: steps, selectedItem: selectedItem)
     }
 }
-
 class GameViewModel: ObservableObject {
     @Published var currentLevel: Level
     @Published var grid: [[Int]]           // Used only for background cell rendering
@@ -43,17 +39,12 @@ class GameViewModel: ObservableObject {
     @Published var isWin: Bool = false
     @Published var isPerfectWin: Bool = false // Whether the player solved it in the minimum number of steps
     @Published var isTesting: Bool = false
-
     @Published var selectedItem: SelectionType? = nil
-
     private var flagRow: Int
     private var flagCol: Int
-
     // History stack for undo support
     private var snapshots: [GameSnapshot] = []
-
     var canUndo: Bool { !snapshots.isEmpty }
-
     init(level: Level) {
         self.currentLevel = level
         self.grid = level.grid
@@ -61,7 +52,7 @@ class GameViewModel: ObservableObject {
         self.flagCol = level.startPos.col
         self.pieces = GameViewModel.buildPieces(from: level.grid)
         if level.checkOptimal {
-            self.currentLevel.minSteps = findOptimal(maxSteps: 10)
+            self.currentLevel.minSteps = findOptimalMedium(minSteps: 0, maxSteps: 100, minBoxesMoved: 0)[0]
         }
         if level.generateEasy {
             generateEasyLevelCaller()
@@ -70,9 +61,7 @@ class GameViewModel: ObservableObject {
             generateMediumLevelCaller()
         }
     }
-
     // MARK: - Easy level generation
-
     func generateEasyLevelCaller() {
         var activated = false
         while true {
@@ -83,7 +72,6 @@ class GameViewModel: ObservableObject {
             activated = true
         }
     }
-
     func generateEasyLevel() -> Bool {
         grid = [
             [-1, -1, -1, -1, -1, -1, -1, -1],
@@ -140,7 +128,6 @@ class GameViewModel: ObservableObject {
                     direction = newDirection
                 }
             } while repeats < 0
-
             if grid[pointer[0] + getDirectionDelta(direction).0][pointer[1] + getDirectionDelta(direction).1] == 0 ||
                grid[pointer[0] + getDirectionDelta(direction).0][pointer[1] + getDirectionDelta(direction).1] == 2 {
                 pointer = pointerReset
@@ -185,22 +172,19 @@ class GameViewModel: ObservableObject {
         }
         return true
     }
-
     // MARK: - Medium level generation
-
     func generateMediumLevelCaller() {
+        print("begin generation")
         while true {
             if generateMediumLevel() { break }
         }
     }
-
     // Generates a puzzle where the optimal solution is 6–10 steps and requires
     // moving at least 3 distinct boxes. Uses BFS that tracks which boxes have
     // been moved so the box-count constraint can be enforced exactly.
     func generateMediumLevel() -> Bool {
         let size = 8
         var g = Array(repeating: Array(repeating: 0, count: size), count: size)
-
         var occupied = Set<Int>()
         func randomCell() -> (Int, Int)? {
             for _ in 0..<200 {
@@ -210,27 +194,22 @@ class GameViewModel: ObservableObject {
             }
             return nil
         }
-
         guard let (fr, fc) = randomCell() else { return false }
         guard let (tr, tc) = randomCell() else { return false }
         guard fr != tr && fc != tc else { return false }
-
         g[fr][fc] = TileType.flag.rawValue
         g[tr][tc] = TileType.target.rawValue
-
         // Place 5–8 boxes — more boxes give BFS more options to reach 3+ box moves
         let boxCount = Int.random(in: 5...8)
         for _ in 0..<boxCount {
             guard let (br, bc) = randomCell() else { return false }
             g[br][bc] = TileType.box.rawValue
         }
-
         // Temporarily apply the grid so the BFS helper can read self.grid / flagRow / flagCol
         let savedGrid    = grid
         let savedFlagRow = flagRow
         let savedFlagCol = flagCol
         let savedLevel   = currentLevel
-
         grid    = g
         flagRow = fr
         flagCol = fc
@@ -239,9 +218,7 @@ class GameViewModel: ObservableObject {
                              targetPos: (row: tr, col: tc),
                              minSteps: -1, checkOptimal: false,
                              generateEasy: false, generateMedium: true)
-
         let result = findOptimalMedium(minSteps: 6, maxSteps: 15, minBoxesMoved: 3)
-
         guard result[0] >= 6  && result[1] >= 3 else {
             // Restore state and reject
             grid        = savedGrid
@@ -250,7 +227,6 @@ class GameViewModel: ObservableObject {
             currentLevel = savedLevel
             return false
         }
-
         currentLevel = Level(id: currentLevel.id, name: currentLevel.name, grid: g,
                              startPos: (row: fr, col: fc),
                              targetPos: (row: tr, col: tc),
@@ -261,7 +237,6 @@ class GameViewModel: ObservableObject {
         print("[generateMediumLevel] Generated puzzle with optimal = \(result) steps")
         return true
     }
-
     // BFS variant for medium-level generation.
     // The node state includes a bitmask of which original box cell-indices have
     // been moved at least once, so we can enforce a minimum distinct-box count.
@@ -269,27 +244,30 @@ class GameViewModel: ObservableObject {
     // or -1 if none is found within maxSteps.
     private func findOptimalMedium(minSteps: Int, maxSteps: Int, minBoxesMoved: Int) -> [Int] {
         let startTime = Date()
-
         let rows      = grid.count
         let cols      = grid[0].count
         let target    = currentLevel.targetPos
         let targetIdx = target.row * cols + target.col
-
         let flagRaw  = TileType.flag.rawValue
         let boxRaw   = TileType.box.rawValue
         let emptyRaw = TileType.empty.rawValue
-
         let deltas = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-
         // Extended node: bitboard + flag index + bitmask of original box cells moved.
         // We use a UInt64 bitmask over the 64 cell indices — one bit per cell that
         // held a box in the initial state and has been slid at least once.
         struct MediumNode: Hashable {
-            var state:      BFSState
-            var flagIdx:    Int
-            var boxesMoved: UInt64  // bit i set → cell i was an initial box that got moved
+            let state:      BFSState
+            let flagIdx:    Int
+            let boxesMoved: UInt64  // bit i set → cell i was an initial box that got moved
+            let path:       [BFSState]
+            static func == (lhs: Self, rhs: Self) -> Bool {
+                return lhs.state.w0 == rhs.state.w0 && lhs.state.w1 == rhs.state.w1
+            }
+            func hash(into hasher: inout Hasher) {
+                hasher.combine(state.w0)
+                hasher.combine(state.w1)
+            }
         }
-
         // Record original box positions as a bitmask for fast bit-setting later
         let initialState = packGrid()
         let initialBoxMask: UInt64 = {
@@ -297,30 +275,27 @@ class GameViewModel: ObservableObject {
             for idx in initialState.boxIndices() { mask |= (1 << idx) }
             return mask
         }()
-
         let initial  = MediumNode(state: initialState,
                                   flagIdx: flagRow * cols + flagCol,
-                                  boxesMoved: 0)
+                                  boxesMoved: 0, path: [initialState])
         var frontier = [initial]
         var visited  = [MediumNode: Int]()   // node → first depth seen
         visited[initial] = 0
-
         let bestResult = -1
-
         for step in 1...maxSteps {
             var next = [MediumNode]()
             next.reserveCapacity(frontier.count * 4)
-
             for node in frontier {
                 let st    = node.state
                 let fIdx  = node.flagIdx
                 let fRow  = fIdx / cols
                 let fCol  = fIdx % cols
                 let boxes = st.boxIndices()
-                if Date().timeIntervalSince(startTime) > 2 { return [bestResult, -1] }
-
+                if Date().timeIntervalSince(startTime) > 1.5 {
+                    print("Time Limit Exceeded, \(visited.count) nodes visited in \(step) steps")
+                    return [bestResult, -1]
+                }
                 for (dRow, dCol) in deltas {
-
                     // ── Move flag ──────────────────────────────────────────
                     var tRow = fRow, tCol = fCol, hitBox = false
                     while true {
@@ -337,19 +312,24 @@ class GameViewModel: ObservableObject {
                             // Win — check both constraints
                             let boxCount = node.boxesMoved.nonzeroBitCount
                             let elapsed = Date().timeIntervalSince(startTime)
-                            print("[findOptimalMedium] Found in \(step) step(s), \(boxCount) boxes moved. Time: \(String(format: "%.4f", elapsed))s")
-                            let grid2 = unpackGrid(from: node.state, rows: grid.count, cols: grid[0].count)
-                            for line in grid2 {print(line)}
+                            print("[findOptimalMedium] Found in \(step) step(s), \(boxCount) boxes moved. Time: \(String(format: "%.4f", elapsed))s, \(visited.count) nodes visited")
+                            if step >= 6 && boxCount >= 3 {
+                                for board in node.path {
+                                    let grid2 = unpackGrid(from: board, rows: 8, cols: 8)
+                                    for line in grid2 {print(line)}
+                                    print()
+                                }
+                                
+                            }
                             return [step, boxCount]
                         }
                         let newNode = MediumNode(state: newSt, flagIdx: newFIdx,
-                                                 boxesMoved: node.boxesMoved)
+                                                 boxesMoved: node.boxesMoved, path: node.path + [newSt])
                         if visited[newNode] == nil {
                             visited[newNode] = step
                             next.append(newNode)
                         }
                     }
-
                     // ── Move each box ──────────────────────────────────────
                     for bIdx in boxes {
                         let r = bIdx / cols, c = bIdx % cols
@@ -363,16 +343,14 @@ class GameViewModel: ObservableObject {
                         }
                         let newBIdx = btRow * cols + btCol
                         guard newBIdx != bIdx else { continue }
-
                         // Mark this original box cell as moved if it was in the initial layout
                         let newBoxesMoved = node.boxesMoved | (initialBoxMask & (1 << bIdx))
-
                         if !hitObstacle {
                             let nRow = btRow + dRow; let nCol = btCol + dCol
                             if nRow < 0 || nRow >= rows || nCol < 0 || nCol >= cols {
                                 let newNode = MediumNode(state: st.setting(index: bIdx, to: emptyRaw),
                                                          flagIdx: fIdx,
-                                                         boxesMoved: newBoxesMoved)
+                                                         boxesMoved: newBoxesMoved, path: node.path + [st.setting(index: bIdx, to: emptyRaw)])
                                 if visited[newNode] == nil {
                                     visited[newNode] = step
                                     next.append(newNode)
@@ -383,7 +361,7 @@ class GameViewModel: ObservableObject {
                         let newNode = MediumNode(state: st.setting(index: bIdx,    to: emptyRaw)
                                                           .setting(index: newBIdx, to: boxRaw),
                                                   flagIdx: fIdx,
-                                                  boxesMoved: newBoxesMoved)
+                                                 boxesMoved: newBoxesMoved, path: node.path + [st.setting(index: bIdx,    to: emptyRaw).setting(index: newBIdx, to: boxRaw)])
                         if visited[newNode] == nil {
                             visited[newNode] = step
                             next.append(newNode)
@@ -391,18 +369,14 @@ class GameViewModel: ObservableObject {
                     }
                 }
             }
-
             if next.isEmpty { break }
             frontier = next
         }
-
         let elapsed = Date().timeIntervalSince(startTime)
-        print("[findOptimalMedium] No qualifying solution found within \(maxSteps) step(s). Time: \(String(format: "%.4f", elapsed))s")
+        print("[findOptimalMedium] No qualifying solution found within \(maxSteps) step(s). Time: \(String(format: "%.4f", elapsed))s, \(visited.count) nodes visited")
         return [bestResult, -1]
     }
-
     // MARK: - Direction helpers
-
     func oppositeDirection(direction: MoveDirection?) -> MoveDirection? {
         if direction == .up    { return .down  }
         if direction == .down  { return .up    }
@@ -410,25 +384,21 @@ class GameViewModel: ObservableObject {
         if direction == .left  { return .right }
         return nil
     }
-
     // MARK: - BFS
-
     // -------------------------------------------------------------------------
     // Compact BFS state: entire 8×8 board packed into two UInt64 words.
     // 2 bits per cell (values 0–3) × 64 cells = 128 bits total.
     // Hashing and equality are O(1) integer ops — no Array overhead.
     // -------------------------------------------------------------------------
     private struct BFSState: Hashable {
-        var w0: UInt64   // cells 0–31  (row*cols+col, 2 bits each)
-        var w1: UInt64   // cells 32–63
-
+        let w0: UInt64   // cells 0–31  (row*cols+col, 2 bits each)
+        let w1: UInt64   // cells 32–63
         @inline(__always)
         func tile(at index: Int) -> Int {
             let shift = (index & 31) << 1
             let word  = index < 32 ? w0 : w1
             return Int((word >> shift) & 0x3)
         }
-
         @inline(__always)
         func setting(index: Int, to value: Int) -> BFSState {
             let shift = UInt64((index & 31) << 1)
@@ -440,7 +410,6 @@ class GameViewModel: ObservableObject {
                 return BFSState(w0: w0, w1: (w1 & ~mask) | bits)
             }
         }
-
         // Extract all box cell-indices via bitwise scan — avoids looping all 64 cells.
         // boxRaw == 1 (binary 01), so a 2-bit pair is a box iff its low bit is 1
         // and its high bit is 0.
@@ -460,7 +429,6 @@ class GameViewModel: ObservableObject {
             return result
         }
     }
-
     // Pack self.grid into a BFSState bitboard.
     private func packGrid() -> BFSState {
         let cols = grid[0].count
@@ -495,46 +463,36 @@ class GameViewModel: ObservableObject {
         
         return grid
     }
-
     // BFS node: bitboard + flag cell index (row*cols+col).
     private struct BFSNode: Hashable {
         var state:   BFSState
         var flagIdx: Int
     }
-
     // Forward BFS for optimal solution.
     func findOptimal(maxSteps: Int = 5) -> Int {
         let startTime = Date()
-
         let rows      = grid.count
         let cols      = grid[0].count
         let target    = currentLevel.targetPos
         let targetIdx = target.row * cols + target.col
-
         let flagRaw  = TileType.flag.rawValue
         let boxRaw   = TileType.box.rawValue
         let emptyRaw = TileType.empty.rawValue
-
         let deltas = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-
         let initial  = BFSNode(state: packGrid(), flagIdx: flagRow * cols + flagCol)
         var frontier = [initial]
         var visited  = Set<BFSNode>(minimumCapacity: 1 << 18)
         visited.insert(initial)
-
         for step in 1...maxSteps {
             var next = [BFSNode]()
             next.reserveCapacity(frontier.count * 4)
-
             for node in frontier {
                 let st    = node.state
                 let fIdx  = node.flagIdx
                 let fRow  = fIdx / cols
                 let fCol  = fIdx % cols
                 let boxes = st.boxIndices()
-
                 for (dRow, dCol) in deltas {
-
                     // ── Move flag ──────────────────────────────────────────
                     var tRow = fRow, tCol = fCol, hitBox = false
                     while true {
@@ -555,7 +513,6 @@ class GameViewModel: ObservableObject {
                         let newNode = BFSNode(state: newSt, flagIdx: newFIdx)
                         if visited.insert(newNode).inserted { next.append(newNode) }
                     }
-
                     // ── Move each box ──────────────────────────────────────
                     for bIdx in boxes {
                         let r = bIdx / cols, c = bIdx % cols
@@ -569,7 +526,6 @@ class GameViewModel: ObservableObject {
                         }
                         let newBIdx = btRow * cols + btCol
                         guard newBIdx != bIdx else { continue }
-
                         if !hitObstacle {
                             let nRow = btRow + dRow; let nCol = btCol + dCol
                             if nRow < 0 || nRow >= rows || nCol < 0 || nCol >= cols {
@@ -586,18 +542,14 @@ class GameViewModel: ObservableObject {
                     }
                 }
             }
-
             if next.isEmpty { break }
             frontier = next
         }
-
         let elapsed = Date().timeIntervalSince(startTime)
         print("[findOptimal] No solution found within \(maxSteps) step(s). Total time: \(String(format: "%.4f", elapsed))s")
         return -1
     }
-
     // MARK: - Piece building
-
     private static func buildPieces(from grid: [[Int]]) -> [MovingPiece] {
         var result: [MovingPiece] = []
         for row in grid.indices {
@@ -611,9 +563,7 @@ class GameViewModel: ObservableObject {
         }
         return result
     }
-
     // MARK: - Game actions
-
     func reset() {
         self.snapshots = []
         self.steps = 0
@@ -636,7 +586,6 @@ class GameViewModel: ObservableObject {
         }
         self.pieces = GameViewModel.buildPieces(from: currentLevel.grid)
     }
-
     func loadSnapshot(pop: Bool, index: Int = 0) {
         var snapshot: GameSnapshot
         if pop {
@@ -653,7 +602,6 @@ class GameViewModel: ObservableObject {
         checkState(considerLoss: true)
         syncPieceSelection()
     }
-
     private func saveSnapshot() {
         snapshots.append(GameSnapshot(
             grid: grid, pieces: pieces,
@@ -661,7 +609,6 @@ class GameViewModel: ObservableObject {
             steps: steps, selectedItem: selectedItem
         ))
     }
-
     func selectItem(row: Int, col: Int) {
         guard !isGameOver && !isWin else { return }
         let type = grid[row][col]
@@ -672,7 +619,6 @@ class GameViewModel: ObservableObject {
         }
         syncPieceSelection()
     }
-
     func moveSelectedItem(direction: MoveDirection, save: Bool = true) -> [Int] {
         guard !isGameOver && !isWin, let item = selectedItem else { return [-1, -1] }
         if save { saveSnapshot() }
@@ -686,7 +632,6 @@ class GameViewModel: ObservableObject {
         syncPieceSelection()
         return pos
     }
-
     private func syncPieceSelection() {
         for i in pieces.indices {
             switch selectedItem {
@@ -699,7 +644,6 @@ class GameViewModel: ObservableObject {
             }
         }
     }
-
     private func moveFlag(direction: MoveDirection) -> [Int] {
         let (dRow, dCol) = getDirectionDelta(direction)
         var targetRow = flagRow, targetCol = flagCol, hitBox = false
@@ -739,7 +683,6 @@ class GameViewModel: ObservableObject {
         checkState()
         return [targetRow, targetCol]
     }
-
     private func moveBox(fromRow: Int, fromCol: Int, direction: MoveDirection) -> [Int] {
         let (dRow, dCol) = getDirectionDelta(direction)
         var targetRow = fromRow, targetCol = fromCol, hitObstacle = false
@@ -779,7 +722,6 @@ class GameViewModel: ObservableObject {
         selectedItem = .box(row: targetRow, col: targetCol)
         return [targetRow, targetCol]
     }
-
     private func getDirectionDelta(_ direction: MoveDirection) -> (Int, Int) {
         switch direction {
         case .up:    return (-1,  0)
@@ -788,11 +730,9 @@ class GameViewModel: ObservableObject {
         case .right: return ( 0,  1)
         }
     }
-
     private func isOutOfBounds(row: Int, col: Int) -> Bool {
         return row < 0 || row >= grid.count || col < 0 || col >= grid[0].count
     }
-
     private func checkState(considerLoss: Bool = false) {
         if flagRow == currentLevel.targetPos.row && flagCol == currentLevel.targetPos.col {
             isWin = true
@@ -803,3 +743,4 @@ class GameViewModel: ObservableObject {
         }
     }
 }
+
