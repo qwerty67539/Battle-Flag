@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Battle Flag — Sliding Puzzle Game for iPhone</title>
+  <meta name="description" content="Battle Flag is a minimalist sliding puzzle game for iPhone. Slide the flag, outmaneuver the obstacles, and find the optimal path." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1e30;
+      --surface:   #1a2d45;
+      --card:      #1e3a5a;
+      --border:    #2a4a6e;
+      --accent:    #e03535;
+      --blue:      #7ab3e0;
+      --yellow:    #f0b830;
+      --text:      #dce8f5;
+      --muted:     #7a9ab8;
+      --radius:    14px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.7; min-height: 100vh;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────── */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; position: sticky; top: 0; z-index: 100; }
+    .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 14px; height: 64px; }
+    .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .site-title { font-size: 17px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .nav-links { margin-left: auto; display: flex; gap: 20px; align-items: center; }
+    .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color .2s; }
+    .nav-links a:hover { color: var(--blue); }
+    .nav-cta {
+      background: var(--accent); color: #fff !important;
+      font-weight: 700 !important; padding: 8px 18px;
+      border-radius: 20px; transition: opacity .2s !important;
+    }
+    .nav-cta:hover { opacity: .85; }
+
+    /* ── HERO ───────────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #1a2d45 0%, #0f1e30 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 80px 24px 72px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(224,53,53,.08), transparent);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 12px; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: clamp(44px, 8vw, 80px); font-weight: 900;
+      line-height: 1.05; color: #fff; margin-bottom: 20px;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px); color: var(--muted);
+      max-width: 520px; margin: 0 auto 36px;
+    }
+    .hero-cta-group { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      font-size: 16px; font-weight: 700;
+      padding: 14px 30px; border-radius: 30px;
+      text-decoration: none; transition: opacity .2s;
+    }
+    .btn-primary:hover { opacity: .85; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: transparent; color: var(--blue);
+      font-size: 16px; font-weight: 600;
+      padding: 14px 30px; border-radius: 30px;
+      border: 1.5px solid var(--border);
+      text-decoration: none; transition: border-color .2s, color .2s;
+    }
+    .btn-secondary:hover { border-color: var(--blue); color: #fff; }
+
+    /* ── BOARD PREVIEW ──────────────────────────────────────────── */
+    .board-section {
+      max-width: 1100px; margin: 0 auto;
+      padding: 80px 24px 0;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center;
+    }
+    @media (max-width: 700px) { .board-section { grid-template-columns: 1fr; } }
+    .board-wrap { display: flex; justify-content: center; }
+
+    /* SVG mini-board */
+    .board-svg { filter: drop-shadow(0 20px 40px rgba(0,0,0,.5)); }
+
+    .board-text h2 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; color: #fff; margin-bottom: 14px; }
+    .board-text p  { font-size: 16px; color: var(--muted); margin-bottom: 20px; }
+    .rule-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .rule-list li {
+      display: flex; gap: 12px; align-items: flex-start;
+      font-size: 15px; color: var(--text);
+    }
+    .rule-list li .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── FEATURES ───────────────────────────────────────────────── */
+    .features-section { max-width: 1100px; margin: 80px auto 0; padding: 0 24px; }
+    .features-section h2 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; color: #fff; text-align: center; margin-bottom: 40px; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .feature-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+      transition: border-color .2s;
+    }
+    .feature-card:hover { border-color: var(--blue); }
+    .feature-card .f-icon { font-size: 28px; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .feature-card p  { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* ── DIFFICULTY ─────────────────────────────────────────────── */
+    .diff-section { max-width: 1100px; margin: 80px auto 0; padding: 0 24px; }
+    .diff-section h2 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; color: #fff; text-align: center; margin-bottom: 40px; }
+    .diff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 600px) { .diff-grid { grid-template-columns: 1fr; } }
+    .diff-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 22px;
+      text-align: center;
+    }
+    .diff-badge {
+      display: inline-block; font-size: 12px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 4px 14px; border-radius: 20px; margin-bottom: 14px;
+    }
+    .diff-badge.easy   { background: rgba(46,204,113,.15); color: #2ecc71; border: 1px solid rgba(46,204,113,.3); }
+    .diff-badge.medium { background: rgba(240,184,48,.12); color: var(--yellow); border: 1px solid rgba(240,184,48,.3); }
+    .diff-badge.hard   { background: rgba(224,53,53,.12);  color: var(--accent); border: 1px solid rgba(224,53,53,.3); }
+    .diff-card h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .diff-card p  { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .diff-card .steps-badge {
+      display: inline-block; margin-top: 12px;
+      font-size: 13px; font-weight: 600; color: var(--blue);
+    }
+
+    /* ── CTA ────────────────────────────────────────────────────── */
+    .cta-section {
+      text-align: center; padding: 80px 24px;
+      margin-top: 80px;
+      background: linear-gradient(135deg, #1a2d45, #0f1e30);
+      border-top: 1px solid var(--border);
+    }
+    .cta-section h2 { font-size: clamp(26px, 4vw, 40px); font-weight: 800; color: #fff; margin-bottom: 12px; }
+    .cta-section p { font-size: 16px; color: var(--muted); margin-bottom: 28px; }
+
+    /* ── FOOTER ─────────────────────────────────────────────────── */
+    footer {
+      text-align: center; padding: 28px 24px;
+      font-size: 13px; color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo">🚩</div>
+    <a class="site-title" href="marketing.html">Battle Flag</a>
+    <nav class="nav-links">
+      <a href="support.html">Support</a>
+      <a href="privacy-policy.html">Privacy</a>
+      <a href="user-privacy-choices.html">Your Choices</a>
+      <a class="nav-cta" href="#">Download Free</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">iOS Puzzle Game</div>
+  <h1>Slide the flag.<br><span>Find the path.</span></h1>
+  <p class="hero-sub">A minimalist sliding puzzle that rewards precision thinking. Move the Battle Flag to the target — in as few steps as possible.</p>
+  <div class="hero-cta-group">
+    <a class="btn-primary" href="#">⬇ Download on the App Store</a>
+    <a class="btn-secondary" href="support.html">How to Play</a>
+  </div>
+</section>
+
+<!-- BOARD + RULES -->
+<div class="board-section">
+  <div class="board-wrap">
+    <svg class="board-svg" xmlns="http://www.w3.org/2000/svg" width="340" height="340" viewBox="0 0 340 340">
+      <rect width="340" height="340" rx="20" fill="#1e3a5a"/>
+      <!-- Grid tiles -->
+      <rect x="8"   y="8"   width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="72"  y="8"   width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="136" y="8"   width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="200" y="8"   width="56" height="56" rx="7" fill="#324f6e" stroke="#7a9ab8" stroke-width="1.5"/>
+      <rect x="210" y="18"  width="36" height="36" rx="5" fill="none" stroke="#7a9ab8" stroke-width="1.5"/>
+      <rect x="264" y="8"   width="56" height="56" rx="7" fill="#2a4a6e"/>
+
+      <rect x="8"   y="72"  width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="72"  y="72"  width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="136" y="72"  width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <circle cx="164" cy="100" r="4.5" fill="#f0b830"/>
+      <rect x="200" y="72"  width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="264" y="72"  width="56" height="56" rx="7" fill="#2a4a6e"/>
+
+      <rect x="8"   y="136" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="72"  y="136" width="56" height="56" rx="7" fill="#4a5a6a"/>
+      <rect x="136" y="136" width="56" height="56" rx="7" fill="#c0392b"/>
+      <rect x="153" y="152" width="6"  height="24" rx="3" fill="white"/>
+      <rect x="145" y="160" width="24" height="6"  rx="3" fill="white"/>
+      <rect x="200" y="136" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <polygon points="228,148 248,176 208,176" fill="#f0b830"/>
+      <rect x="264" y="136" width="56" height="56" rx="7" fill="#2a4a6e"/>
+
+      <rect x="8"   y="200" width="56" height="56" rx="7" fill="#324f6e" stroke="#7a9ab8" stroke-width="1.5"/>
+      <rect x="18"  y="210" width="36" height="36" rx="5" fill="none" stroke="#7a9ab8" stroke-width="1.5"/>
+      <rect x="72"  y="200" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="136" y="200" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="200" y="200" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="264" y="200" width="56" height="56" rx="7" fill="#4a5a6a"/>
+
+      <rect x="8"   y="264" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="72"  y="264" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="136" y="264" width="56" height="56" rx="7" fill="#4a5a6a"/>
+      <rect x="200" y="264" width="56" height="56" rx="7" fill="#2a4a6e"/>
+      <rect x="264" y="264" width="56" height="56" rx="7" fill="#2a4a6e"/>
+
+      <!-- Flag -->
+      <polygon points="144,16 144,56 178,36" fill="#e03535" filter="url(#fg)"/>
+      <line x1="144" y1="13" x2="144" y2="59" stroke="#cc2222" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Arrow -->
+      <line x1="182" y1="36" x2="212" y2="36" stroke="#f0b830" stroke-width="2" stroke-dasharray="5,4" opacity=".9"/>
+      <polygon points="212,30 224,36 212,42" fill="#f0b830" opacity=".9"/>
+      <defs>
+        <filter id="fg"><feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#e03535" flood-opacity=".5"/></filter>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="board-text">
+    <h2>One rule that changes everything</h2>
+    <p>Pieces don't stop where you tap. They slide until something stops them — or they fall off the board entirely.</p>
+    <ul class="rule-list">
+      <li><span class="icon">🚩</span> Slide the Battle Flag to the highlighted target cell to win.</li>
+      <li><span class="icon">📦</span> Move boxes to create or block paths for the flag.</li>
+      <li><span class="icon">⚠️</span> If the flag slides off the board, the game is over.</li>
+      <li><span class="icon">↩</span> Undo any move, as many times as you need.</li>
+      <li><span class="icon">⭐</span> Match the optimal step count for a perfect solution.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div class="features-section">
+  <h2>Everything you need. Nothing you don't.</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="f-icon">🎯</div>
+      <h3>Optimal Move Tracking</h3>
+      <p>Every level shows the minimum moves needed. Beat it and you get a perfect win — the game recognises your solution.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon">↩</div>
+      <h3>Unlimited Undo</h3>
+      <p>Step back through your entire move history without restarting. Think freely without fear of making mistakes.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon">🎲</div>
+      <h3>Procedural Levels</h3>
+      <p>Levels 4 and 9 are generated fresh every run — each with a proven optimal solution — so the challenge never gets stale.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon">📴</div>
+      <h3>Fully Offline</h3>
+      <p>No internet connection needed. No accounts, no ads, no tracking. Just the puzzle.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon">🆓</div>
+      <h3>Free to Play</h3>
+      <p>All 9 levels included at no cost. No in-app purchases, no subscriptions, no paywalls.</p>
+    </div>
+    <div class="feature-card">
+      <div class="f-icon">🎨</div>
+      <h3>Minimalist Design</h3>
+      <p>A clean, distraction-free interface designed to keep your focus on the puzzle — nothing more.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DIFFICULTY -->
+<div class="diff-section">
+  <h2>Three difficulty tiers</h2>
+  <div class="diff-grid">
+    <div class="diff-card">
+      <div class="diff-badge easy">Easy</div>
+      <h3>Levels 1 – 4</h3>
+      <p>Learn how sliding pieces behave. Open layouts with short, clean solution paths.</p>
+      <div class="steps-badge">1 – 2 optimal steps</div>
+    </div>
+    <div class="diff-card">
+      <div class="diff-badge medium">Medium</div>
+      <h3>Levels 5 – 8</h3>
+      <p>Dense obstacle fields that require multi-box maneuvering and careful planning.</p>
+      <div class="steps-badge">5 – 9 optimal steps</div>
+    </div>
+    <div class="diff-card">
+      <div class="diff-badge hard">Hard</div>
+      <h3>Level 9</h3>
+      <p>Randomly generated each run. Guaranteed to need 6–15 moves and at least 3 distinct box repositions.</p>
+      <div class="steps-badge">6 – 15 optimal steps</div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Ready to think differently?</h2>
+  <p>Free to download. No account needed. Start playing in seconds.</p>
+  <a class="btn-primary" href="#">⬇ Download on the App Store</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-links">
+    <a href="privacy-policy.html">Privacy Policy</a>
+    <a href="user-privacy-choices.html">Your Privacy Choices</a>
+    <a href="support.html">Support</a>
+    <a href="mailto:allenli693@gmail.com">allenli693@gmail.com</a>
+  </div>
+  <p>&copy; 2026 Battle Flag. All rights reserved.</p>
+</footer>
+
+</body>
+</html>

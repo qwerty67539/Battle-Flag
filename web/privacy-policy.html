@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Battle Flag</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1e30;
+      --surface:   #1a2d45;
+      --card:      #1e3a5a;
+      --border:    #2a4a6e;
+      --accent:    #e03535;
+      --blue:      #7ab3e0;
+      --text:      #dce8f5;
+      --muted:     #7a9ab8;
+      --radius:    14px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+    .header-inner {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      height: 64px;
+    }
+    .logo {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .site-title { font-size: 17px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .nav-links { margin-left: auto; display: flex; gap: 20px; }
+    .nav-links a {
+      font-size: 14px; color: var(--muted); text-decoration: none;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--blue); }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    .page-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      color: var(--accent); text-transform: uppercase; margin-bottom: 10px;
+    }
+    h1 {
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 800; line-height: 1.15;
+      color: #fff; margin-bottom: 8px;
+    }
+    .updated {
+      font-size: 13px; color: var(--muted); margin-bottom: 40px;
+    }
+
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid #27ae60;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 48px;
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+    .summary-card .icon { font-size: 24px; line-height: 1; margin-top: 2px; }
+    .summary-card p { font-size: 15px; color: var(--text); }
+    .summary-card strong { color: #2ecc71; }
+
+    section { margin-bottom: 44px; }
+    h2 {
+      font-size: 20px; font-weight: 700; color: var(--blue);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    p { font-size: 15px; color: var(--text); margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    ul li { font-size: 15px; color: var(--text); margin-bottom: 6px; }
+
+    .check-list { list-style: none; padding: 0; }
+    .check-list li { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+    .check-list li::before {
+      content: "✓";
+      color: #2ecc71;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .contact-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex; gap: 16px; align-items: center;
+    }
+    .contact-card .icon { font-size: 28px; }
+    .contact-card h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .contact-card a { color: var(--blue); text-decoration: none; font-size: 15px; }
+    .contact-card a:hover { text-decoration: underline; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">🚩</div>
+    <a class="site-title" href="marketing.html">Battle Flag</a>
+    <nav class="nav-links">
+      <a href="marketing.html">Home</a>
+      <a href="support.html">Support</a>
+      <a href="privacy-policy.html">Privacy</a>
+      <a href="user-privacy-choices.html">Your Choices</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="page-label">Legal</div>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: October 31, 2026</p>
+
+  <div class="summary-card">
+    <div class="icon">🛡️</div>
+    <p><strong>Short version:</strong> Battle Flag collects no personal data, uses no analytics, and makes no network requests. Everything stays on your device.</p>
+  </div>
+
+  <section>
+    <h2>1. Overview</h2>
+    <p>Battle Flag ("the App") is developed and published as an iOS application. We are committed to protecting your privacy. This policy describes what information the App does and does not collect, and how it is handled.</p>
+  </section>
+
+  <section>
+    <h2>2. Information We Do Not Collect</h2>
+    <p>The App does not collect, transmit, or store any of the following:</p>
+    <ul class="check-list">
+      <li>Personal identifiers (name, email address, phone number, Apple ID)</li>
+      <li>Device identifiers (IDFA, IDFV, IP address, or any hardware ID)</li>
+      <li>Location data of any kind</li>
+      <li>Usage analytics or gameplay telemetry</li>
+      <li>Crash reports or diagnostic data sent to us</li>
+      <li>Photos, contacts, calendar, or any other device data</li>
+      <li>Payment or financial information</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. No Network Communication</h2>
+    <p>Battle Flag operates entirely offline. The App makes no network requests at any time. There are no servers, no accounts, no cloud sync, and no third-party SDKs embedded in the App.</p>
+  </section>
+
+  <section>
+    <h2>4. Local Storage</h2>
+    <p>The App may store your current game state locally on your device using iOS system storage (e.g. UserDefaults or in-memory state). This data never leaves your device and is deleted when you uninstall the App.</p>
+  </section>
+
+  <section>
+    <h2>5. Apple Platform Services</h2>
+    <p>As with all apps distributed through the Apple App Store, Apple may collect certain data as part of their standard platform services (such as App Store analytics and crash reporting). This data is governed by <a href="https://www.apple.com/privacy/" target="_blank" rel="noopener" style="color: var(--blue);">Apple's Privacy Policy</a>, not ours.</p>
+  </section>
+
+  <section>
+    <h2>6. Children's Privacy</h2>
+    <p>Battle Flag does not collect any data from any user, including children. The App is suitable for all ages. We comply with the Children's Online Privacy Protection Act (COPPA) and equivalent regulations.</p>
+  </section>
+
+  <section>
+    <h2>7. Changes to This Policy</h2>
+    <p>If we ever update this privacy policy, we will update the "Last updated" date at the top of this page. Any future version of the App that collects data will include a new policy prior to release.</p>
+  </section>
+
+  <section>
+    <h2>8. Contact</h2>
+    <div class="contact-card">
+      <div class="icon">✉️</div>
+      <div>
+        <h3>Questions about privacy?</h3>
+        <a href="mailto:allenli693@gmail.com">allenli693@gmail.com</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>&copy; 2026 Battle Flag &nbsp;·&nbsp; <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp; <a href="user-privacy-choices.html">Your Privacy Choices</a> &nbsp;·&nbsp; <a href="support.html">Support</a></p>
+</footer>
+
+</body>
+</html>

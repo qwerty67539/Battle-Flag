@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — Battle Flag</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1e30;
+      --surface:   #1a2d45;
+      --card:      #1e3a5a;
+      --border:    #2a4a6e;
+      --accent:    #e03535;
+      --blue:      #7ab3e0;
+      --yellow:    #f0b830;
+      --text:      #dce8f5;
+      --muted:     #7a9ab8;
+      --radius:    14px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.7; min-height: 100vh;
+    }
+
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; }
+    .header-inner {
+      max-width: 760px; margin: 0 auto;
+      display: flex; align-items: center; gap: 14px; height: 64px;
+    }
+    .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .site-title { font-size: 17px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .nav-links { margin-left: auto; display: flex; gap: 20px; }
+    .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color .2s; }
+    .nav-links a:hover { color: var(--blue); }
+
+    main { max-width: 760px; margin: 0 auto; padding: 56px 24px 80px; }
+
+    .page-label { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; }
+    h1 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; line-height: 1.15; color: #fff; margin-bottom: 32px; }
+
+    /* How to play */
+    .rules {
+      display: flex; flex-direction: column; gap: 12px;
+      margin-bottom: 48px;
+    }
+    .rule {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .rule-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--border); color: var(--blue);
+      font-weight: 800; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .rule p { font-size: 15px; color: var(--text); }
+
+    /* FAQ */
+    .faq { display: flex; flex-direction: column; gap: 12px; margin-bottom: 48px; }
+    .faq-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .faq-item summary {
+      font-size: 15px; font-weight: 600; color: var(--text);
+      padding: 18px 20px; cursor: pointer; list-style: none;
+      display: flex; justify-content: space-between; align-items: center;
+      user-select: none;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after { content: "+"; font-size: 20px; color: var(--blue); flex-shrink: 0; margin-left: 12px; }
+    .faq-item[open] summary::after { content: "−"; }
+    .faq-item .answer { padding: 0 20px 18px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+    /* Contact */
+    .contact-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+      text-align: center;
+    }
+    .contact-card .icon { font-size: 36px; margin-bottom: 12px; }
+    .contact-card h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .contact-card p { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+    .contact-card a.btn {
+      display: inline-block;
+      background: var(--accent); color: #fff;
+      font-size: 15px; font-weight: 700;
+      padding: 12px 28px; border-radius: 30px;
+      text-decoration: none; transition: opacity .2s;
+    }
+    .contact-card a.btn:hover { opacity: .85; }
+
+    section { margin-bottom: 48px; }
+    h2 { font-size: 20px; font-weight: 700; color: var(--blue); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+    footer { text-align: center; padding: 24px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); }
+    footer a { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">🚩</div>
+    <a class="site-title" href="marketing.html">Battle Flag</a>
+    <nav class="nav-links">
+      <a href="marketing.html">Home</a>
+      <a href="support.html">Support</a>
+      <a href="privacy-policy.html">Privacy</a>
+      <a href="user-privacy-choices.html">Your Choices</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="page-label">Help Center</div>
+  <h1>Support</h1>
+
+  <section>
+    <h2>How to Play</h2>
+    <div class="rules">
+      <div class="rule">
+        <div class="rule-num">1</div>
+        <p>Each turn, you may slide the <strong>Battle Flag</strong> or a <strong>box</strong> one step in any direction: up, down, left, or right.</p>
+      </div>
+      <div class="rule">
+        <div class="rule-num">2</div>
+        <p>A sliding piece keeps moving until it hits another piece or a wall — it doesn't stop after one cell.</p>
+      </div>
+      <div class="rule">
+        <div class="rule-num">3</div>
+        <p>If nothing blocks it, the sliding piece <strong>exits the board</strong> and is gone for the rest of the level.</p>
+      </div>
+      <div class="rule">
+        <div class="rule-num">4</div>
+        <p>If the <strong>Battle Flag slides off the board</strong>, you lose. Tap <em>Restart</em> to try again.</p>
+      </div>
+      <div class="rule">
+        <div class="rule-num">5</div>
+        <p>Slide the Battle Flag onto the <strong>target cell</strong> to win. The game tells you the minimum number of steps — try to match it for a perfect solution.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq">
+      <details class="faq-item">
+        <summary>What does "Optimal" mean next to my step count?</summary>
+        <div class="answer">Each level has a known minimum number of moves needed to reach the target. The game shows your current steps alongside that optimal number so you can see how close you are. Matching the optimal earns a "Victory ✅ — You found the optimal solution!" message.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Can I undo a move?</summary>
+        <div class="answer">Yes. Tap the ↩ (undo) button in the top-right corner to step back one move at a time. You can undo as many moves as you like, all the way back to the start of the level.</div>
+      </details>
+      <details class="faq-item">
+        <summary>The flag slid off the board — how do I continue?</summary>
+        <div class="answer">If the Battle Flag exits the board, the game ends immediately. Tap <em>Restart</em> on the game-over screen to reset the level to its starting state.</div>
+      </details>
+      <details class="faq-item">
+        <summary>How do I select a piece to move?</summary>
+        <div class="answer">Tap any piece (the flag or a grey box) to select it. Arrow buttons will appear at the bottom of the screen. Tap an arrow to slide the selected piece in that direction. Tap an empty cell or a different piece to change your selection.</div>
+      </details>
+      <details class="faq-item">
+        <summary>What is Level 4 / Level 9? The board looks different each time.</summary>
+        <div class="answer">Level 4 is a randomly generated Easy puzzle, and Level 9 is a randomly generated Hard puzzle. Each run generates a fresh board with a guaranteed solution, so these levels are always different when you restart them after a perfect win.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Does the app require an internet connection?</summary>
+        <div class="answer">No. Battle Flag is fully offline. You can play anywhere with no network required.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Does the app save my progress?</summary>
+        <div class="answer">The app keeps your current in-progress game state while it's running. Full persistent save across sessions is not yet implemented — if you close and reopen the app, levels restart from the beginning.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Is Battle Flag free?</summary>
+        <div class="answer">Yes, the app is completely free to download and play. There are no in-app purchases, subscriptions, or ads.</div>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Contact Us</h2>
+    <div class="contact-card">
+      <div class="icon">✉️</div>
+      <h3>Still need help?</h3>
+      <p>Send us an email and we'll get back to you as soon as possible.</p>
+      <a class="btn" href="mailto:allenli693@gmail.com">allenli693@gmail.com</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>&copy; 2026 Battle Flag &nbsp;·&nbsp; <a href="privacy-policy.html">Privacy Policy</a> &nbsp;·&nbsp; <a href="user-privacy-choices.html">Your Privacy Choices</a> &nbsp;·&nbsp; <a href="support.html">Support</a></p>
+</footer>
+
+</body>
+</html>
