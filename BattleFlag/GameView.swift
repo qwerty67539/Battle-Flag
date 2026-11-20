@@ -52,6 +52,14 @@ struct GameView: View {
                         .font(.title2)
                 }
                 .disabled(!viewModel.canUndo)
+                Button(action: {
+                    viewModel.playTip()
+                }) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.title2)
+                        .foregroundColor(viewModel.isTipPlaying ? .gray : .yellow)
+                }
+                .disabled(viewModel.isTipPlaying || viewModel.isGameOver || viewModel.isWin)
             }
             .padding()
 
@@ -136,7 +144,13 @@ struct GameView: View {
                                 .foregroundColor(.white)
                         }
 
-                        Button("Restart") { viewModel.reset() }
+                        Button("Restart") {
+                            if viewModel.tipWasUsed {
+                                viewModel.resetToCurrentMap()
+                            } else {
+                                viewModel.reset()
+                            }
+                        }
                             .padding()
                             .background(Color.blue)
                             .foregroundColor(.white)

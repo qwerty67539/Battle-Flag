@@ -4,6 +4,11 @@ enum SelectionType: Hashable {
     case flag
     case box(row: Int, col: Int)
 }
+// A single move in a tip solution: which piece and which direction
+struct TipMove {
+    let item: SelectionType
+    let direction: MoveDirection
+}
 // Represents an animatable piece on the board
 struct MovingPiece: Identifiable, Hashable{
     let id: String       // stable identity: "flag" or "box-r-c" based on initial position
@@ -40,6 +45,8 @@ class GameViewModel: ObservableObject {
     @Published var isPerfectWin: Bool = false // Whether the player solved it in the minimum number of steps
     @Published var isTesting: Bool = false
     @Published var selectedItem: SelectionType? = nil
+    @Published var isTipPlaying: Bool = false
+    @Published var tipWasUsed: Bool = false   // true once playTip() runs; cleared on reset
     private var flagRow: Int
     private var flagCol: Int
     // History stack for undo support
@@ -549,6 +556,175 @@ class GameViewModel: ObservableObject {
         print("[findOptimal] No solution found within \(maxSteps) step(s). Total time: \(String(format: "%.4f", elapsed))s")
         return -1
     }
+    // MARK: - Tip / hint replay
+    private var tipSnapshot: GameSnapshot? = nil
+    // Compute and animate the optimal solution from the current board state.
+    // The board is played forward step-by-step, then restored to its pre-tip state.
+    func playTip() {
+        guard !isTipPlaying, !isGameOver, !isWin else { return }
+        tipWasUsed = true
+        // Save current state so we can restore it after the animation
+        tipSnapshot = GameSnapshot(
+            grid: grid, pieces: pieces,
+            flagRow: flagRow, flagCol: flagCol,
+            steps: steps, selectedItem: selectedItem
+        )
+        let path = findSolutionPath()
+        guard !path.isEmpty else { return }
+        isTipPlaying = true
+        isTesting = true  // prevent win/loss overlays during playback
+        let stepDelay = 0.65
+        for (i, move) in path.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + stepDelay * Double(i)) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    self.selectedItem = move.item
+                    self.syncPieceSelection()
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + stepDelay * Double(i) + 0.25) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    _ = self.moveSelectedItem(direction: move.direction, save: false)
+                }
+            }
+        }
+        // Restore board after all moves finish
+        let restoreDelay = stepDelay * Double(path.count) + 0.6
+        DispatchQueue.main.asyncAfter(deadline: .now() + restoreDelay) {
+            if let snap = self.tipSnapshot {
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    self.grid        = snap.grid
+                    self.pieces      = snap.pieces
+                    self.flagRow     = snap.flagRow
+                    self.flagCol     = snap.flagCol
+                    self.steps       = snap.steps
+                    self.selectedItem = snap.selectedItem
+                }
+                self.syncPieceSelection()
+            }
+            self.isTesting    = false
+            self.isTipPlaying = false
+            self.tipSnapshot  = nil
+        }
+    }
+    // BFS from the current board state; returns the sequence of (item, direction)
+    // moves that solves the puzzle in the minimum number of steps, or [] if unsolvable.
+    func findSolutionPath() -> [TipMove] {
+        let rows     = grid.count
+        let cols     = grid[0].count
+        let target   = currentLevel.targetPos
+        let targetIdx = target.row * cols + target.col
+        let flagRaw  = TileType.flag.rawValue
+        let boxRaw   = TileType.box.rawValue
+        let emptyRaw = TileType.empty.rawValue
+        let deltas: [(Int, Int, MoveDirection)] = [
+            (-1, 0, .up), (1, 0, .down), (0, -1, .left), (0, 1, .right)
+        ]
+        struct PathNode: Hashable {
+            let state:   BFSState
+            let flagIdx: Int
+            static func == (lhs: Self, rhs: Self) -> Bool {
+                lhs.state.w0 == rhs.state.w0 && lhs.state.w1 == rhs.state.w1 && lhs.flagIdx == rhs.flagIdx
+            }
+            func hash(into hasher: inout Hasher) {
+                hasher.combine(state.w0); hasher.combine(state.w1); hasher.combine(flagIdx)
+            }
+        }
+        struct Move {
+            let item: SelectionType
+            let direction: MoveDirection
+        }
+        // BFS with parent tracking
+        let initState = packGrid()
+        let initNode  = PathNode(state: initState, flagIdx: flagRow * cols + flagCol)
+        var parent  = [PathNode: (PathNode, Move)]()
+        var visited = Set<PathNode>()
+        visited.insert(initNode)
+        var frontier = [initNode]
+        var goalNode: PathNode? = nil
+        outer: while !frontier.isEmpty {
+            var next = [PathNode]()
+            for node in frontier {
+                let st   = node.state
+                let fIdx = node.flagIdx
+                let fRow = fIdx / cols, fCol = fIdx % cols
+                let boxes = st.boxIndices()
+                for (dRow, dCol, dir) in deltas {
+                    // ── Move flag ──
+                    var tRow = fRow, tCol = fCol, hitBox = false
+                    while true {
+                        let nRow = tRow + dRow, nCol = tCol + dCol
+                        if nRow < 0 || nRow >= rows || nCol < 0 || nCol >= cols { break }
+                        if st.tile(at: nRow * cols + nCol) == boxRaw { hitBox = true; break }
+                        tRow = nRow; tCol = nCol
+                    }
+                    if hitBox && !(tRow == fRow && tCol == fCol) {
+                        let newFIdx = tRow * cols + tCol
+                        let newSt   = st.setting(index: fIdx,    to: emptyRaw)
+                                        .setting(index: newFIdx, to: flagRaw)
+                        let newNode = PathNode(state: newSt, flagIdx: newFIdx)
+                        if newFIdx == targetIdx {
+                            parent[newNode] = (node, Move(item: .flag, direction: dir))
+                            goalNode = newNode
+                            break outer
+                        }
+                        if visited.insert(newNode).inserted {
+                            parent[newNode] = (node, Move(item: .flag, direction: dir))
+                            next.append(newNode)
+                        }
+                    }
+                    // ── Move each box ──
+                    for bIdx in boxes {
+                        let r = bIdx / cols, c = bIdx % cols
+                        var btRow = r, btCol = c, hitObstacle = false
+                        while true {
+                            let nRow = btRow + dRow, nCol = btCol + dCol
+                            if nRow < 0 || nRow >= rows || nCol < 0 || nCol >= cols { break }
+                            let t = st.tile(at: nRow * cols + nCol)
+                            if t == boxRaw || t == flagRaw { hitObstacle = true; break }
+                            btRow = nRow; btCol = nCol
+                        }
+                        let newBIdx = btRow * cols + btCol
+                        guard newBIdx != bIdx else { continue }
+                        var newSt: BFSState
+                        if !hitObstacle {
+                            let nRow = btRow + dRow, nCol = btCol + dCol
+                            if nRow < 0 || nRow >= rows || nCol < 0 || nCol >= cols {
+                                // box slides off — treat the original box cell as where
+                                // the selection is (the box disappears)
+                                newSt = st.setting(index: bIdx, to: emptyRaw)
+                                let newNode = PathNode(state: newSt, flagIdx: fIdx)
+                                if visited.insert(newNode).inserted {
+                                    // We track the original row/col of the box before it slid off
+                                    parent[newNode] = (node, Move(item: .box(row: r, col: c), direction: dir))
+                                    next.append(newNode)
+                                }
+                                continue
+                            }
+                        }
+                        newSt = st.setting(index: bIdx, to: emptyRaw)
+                                   .setting(index: newBIdx, to: boxRaw)
+                        let newNode = PathNode(state: newSt, flagIdx: fIdx)
+                        if visited.insert(newNode).inserted {
+                            parent[newNode] = (node, Move(item: .box(row: r, col: c), direction: dir))
+                            next.append(newNode)
+                        }
+                    }
+                }
+            }
+            frontier = next
+        }
+        guard let goal = goalNode else { return [] }
+        // Reconstruct path in forward order
+        var moves = [TipMove]()
+        var cur = goal
+        while let (prev, move) = parent[cur] {
+            // The box SelectionType uses the initial row/col before the move;
+            // that matches what moveSelectedItem expects.
+            moves.append(TipMove(item: move.item, direction: move.direction))
+            cur = prev
+        }
+        return moves.reversed()
+    }
     // MARK: - Piece building
     private static func buildPieces(from grid: [[Int]]) -> [MovingPiece] {
         var result: [MovingPiece] = []
@@ -570,20 +746,31 @@ class GameViewModel: ObservableObject {
         self.isGameOver = false
         self.isWin = false
         self.selectedItem = nil
+        self.tipWasUsed = false
         if isPerfectWin && currentLevel.generateEasy {
-            self.isPerfectWin = false
             generateEasyLevelCaller()
         } else if isPerfectWin && currentLevel.generateMedium {
-            self.isPerfectWin = false
             generateMediumLevelCaller()
         } else {
-            self.isPerfectWin = false
             self.grid = currentLevel.grid
-            //for line in grid { print(line) }
-            //print(isPerfectWin)
             self.flagRow = currentLevel.startPos.row
             self.flagCol = currentLevel.startPos.col
         }
+        self.isPerfectWin = false
+        self.pieces = GameViewModel.buildPieces(from: currentLevel.grid)
+    }
+    // Restart the current map without generating a new one (used after a tip).
+    func resetToCurrentMap() {
+        self.snapshots = []
+        self.steps = 0
+        self.isGameOver = false
+        self.isWin = false
+        self.isPerfectWin = false
+        self.selectedItem = nil
+        self.tipWasUsed = false
+        self.grid = currentLevel.grid
+        self.flagRow = currentLevel.startPos.row
+        self.flagCol = currentLevel.startPos.col
         self.pieces = GameViewModel.buildPieces(from: currentLevel.grid)
     }
     func loadSnapshot(pop: Bool, index: Int = 0) {
