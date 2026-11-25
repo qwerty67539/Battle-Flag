@@ -60,6 +60,14 @@ struct GameView: View {
                         .foregroundColor(viewModel.isTipPlaying ? .gray : .yellow)
                 }
                 .disabled(viewModel.isTipPlaying || viewModel.isGameOver || viewModel.isWin)
+                Button(action: {
+                    viewModel.playTip(giveSolution: true)
+                }) {
+                    Image(systemName: "key.fill")
+                        .font(.title2)
+                        .foregroundColor(viewModel.isTipPlaying ? .gray : .yellow)
+                }
+                .disabled(viewModel.isTipPlaying || viewModel.isGameOver || viewModel.isWin)
             }
             .padding()
 
@@ -143,12 +151,23 @@ struct GameView: View {
                             Text("The Battle Flag slid off the board")
                                 .foregroundColor(.white)
                         }
-
-                        Button("Restart") {
-                            if viewModel.tipWasUsed {
-                                viewModel.resetToCurrentMap()
-                            } else {
-                                viewModel.reset()
+                        Group {
+                            if (viewModel.currentLevel.generateEasy || viewModel.currentLevel.generateMedium) {
+                                Button("Restart") {
+                                        viewModel.reset(newLevel: false)
+                                }
+                                Button("Next Level") {
+                                    viewModel.reset(newLevel: true);
+                                }
+                            }
+                            else {
+                                Button("Restart") {
+                                    if viewModel.tipWasUsed {
+                                        viewModel.resetToCurrentMap()
+                                    } else {
+                                        viewModel.reset()
+                                    }
+                                }
                             }
                         }
                             .padding()

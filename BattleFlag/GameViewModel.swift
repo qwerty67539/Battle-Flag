@@ -49,6 +49,7 @@ class GameViewModel: ObservableObject {
     @Published var tipWasUsed: Bool = false   // true once playTip() runs; cleared on reset
     private var flagRow: Int
     private var flagCol: Int
+    private var hintsteps: Int = 0
     // History stack for undo support
     private var snapshots: [GameSnapshot] = []
     var canUndo: Bool { !snapshots.isEmpty }
@@ -560,7 +561,7 @@ class GameViewModel: ObservableObject {
     private var tipSnapshot: GameSnapshot? = nil
     // Compute and animate the optimal solution from the current board state.
     // The board is played forward step-by-step, then restored to its pre-tip state.
-    func playTip() {
+    func playTip(giveSolution: Bool = false) {
         guard !isTipPlaying, !isGameOver, !isWin else { return }
         tipWasUsed = true
         // Save current state so we can restore it after the animation
@@ -574,7 +575,11 @@ class GameViewModel: ObservableObject {
         isTipPlaying = true
         isTesting = true  // prevent win/loss overlays during playback
         let stepDelay = 0.65
+        var iters = 0
         for (i, move) in path.enumerated() {
+            if (iters > hintsteps && !giveSolution) {
+                break
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + stepDelay * Double(i)) {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                     self.selectedItem = move.item
@@ -586,9 +591,13 @@ class GameViewModel: ObservableObject {
                     _ = self.moveSelectedItem(direction: move.direction, save: false)
                 }
             }
+            iters += 1
         }
         // Restore board after all moves finish
-        let restoreDelay = stepDelay * Double(path.count) + 0.6
+        var restoreDelay = stepDelay * Double(hintsteps + 1) + 0.6
+        if (giveSolution) {
+            restoreDelay = stepDelay * Double(path.count) + 0.6
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + restoreDelay) {
             if let snap = self.tipSnapshot {
                 withAnimation(.easeInOut(duration: 0.4)) {
@@ -604,6 +613,14 @@ class GameViewModel: ObservableObject {
             self.isTesting    = false
             self.isTipPlaying = false
             self.tipSnapshot  = nil
+        }
+        if (giveSolution) {
+            hintsteps = 0
+        } else {
+            hintsteps += 1
+            if (hintsteps > path.count) {
+                hintsteps = path.count
+            }
         }
     }
     // BFS from the current board state; returns the sequence of (item, direction)
@@ -740,16 +757,16 @@ class GameViewModel: ObservableObject {
         return result
     }
     // MARK: - Game actions
-    func reset() {
+    func reset(newLevel: Bool = false) {
         self.snapshots = []
         self.steps = 0
         self.isGameOver = false
         self.isWin = false
         self.selectedItem = nil
         self.tipWasUsed = false
-        if isPerfectWin && currentLevel.generateEasy {
+        if newLevel && currentLevel.generateEasy {
             generateEasyLevelCaller()
-        } else if isPerfectWin && currentLevel.generateMedium {
+        } else if newLevel && currentLevel.generateMedium {
             generateMediumLevelCaller()
         } else {
             self.grid = currentLevel.grid
