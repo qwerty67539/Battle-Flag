@@ -233,6 +233,9 @@ struct GameView: View {
 
             Spacer().frame(height: 20)
         }
+        .alert("No solution found; Maybe undo some moves!", isPresented: $viewModel.showNoSolutionPopup) {
+            
+        }
         .navigationBarHidden(true)
     }
 }

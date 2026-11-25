@@ -35,6 +35,7 @@ private struct GameSnapshot: Hashable {
         return GameSnapshot(grid: grid, pieces: pieces, flagRow: flagRow, flagCol: flagCol, steps: steps, selectedItem: selectedItem)
     }
 }
+
 class GameViewModel: ObservableObject {
     @Published var currentLevel: Level
     @Published var grid: [[Int]]           // Used only for background cell rendering
@@ -49,10 +50,10 @@ class GameViewModel: ObservableObject {
     @Published var tipWasUsed: Bool = false   // true once playTip() runs; cleared on reset
     private var flagRow: Int
     private var flagCol: Int
-    private var hintsteps: Int = 0
     // History stack for undo support
     private var snapshots: [GameSnapshot] = []
     var canUndo: Bool { !snapshots.isEmpty }
+    @Published var showNoSolutionPopup: Bool = false
     init(level: Level) {
         self.currentLevel = level
         self.grid = level.grid
@@ -570,14 +571,19 @@ class GameViewModel: ObservableObject {
             flagRow: flagRow, flagCol: flagCol,
             steps: steps, selectedItem: selectedItem
         )
+        if (giveSolution) {
+            reset(newLevel: false)
+        }
         let path = findSolutionPath()
-        guard !path.isEmpty else { return }
+        guard !path.isEmpty else {
+            return
+        }
         isTipPlaying = true
         isTesting = true  // prevent win/loss overlays during playback
         let stepDelay = 0.65
         var iters = 0
         for (i, move) in path.enumerated() {
-            if (iters > hintsteps && !giveSolution) {
+            if (iters > 0 && !giveSolution) {
                 break
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + stepDelay * Double(i)) {
@@ -594,7 +600,7 @@ class GameViewModel: ObservableObject {
             iters += 1
         }
         // Restore board after all moves finish
-        var restoreDelay = stepDelay * Double(hintsteps + 1) + 0.6
+        var restoreDelay = stepDelay * 1.0 + 0.6
         if (giveSolution) {
             restoreDelay = stepDelay * Double(path.count) + 0.6
         }
@@ -613,14 +619,6 @@ class GameViewModel: ObservableObject {
             self.isTesting    = false
             self.isTipPlaying = false
             self.tipSnapshot  = nil
-        }
-        if (giveSolution) {
-            hintsteps = 0
-        } else {
-            hintsteps += 1
-            if (hintsteps > path.count) {
-                hintsteps = path.count
-            }
         }
     }
     // BFS from the current board state; returns the sequence of (item, direction)
@@ -727,6 +725,10 @@ class GameViewModel: ObservableObject {
                         }
                     }
                 }
+            }
+            if next.isEmpty {
+                showNoSolutionPopup = true
+                return []
             }
             frontier = next
         }
